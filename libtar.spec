@@ -8,6 +8,7 @@ Group:		Libraries
 Source0:	ftp://ftp.feep.net/pub/software/libtar/%{name}-%{version}.tar.gz
 # Source0-md5:	604238e8734ce6e25347a58c4f1a1d7e
 Patch0:		%{name}-shared.patch
+Patch1:		%{name}-fix-memleak.patch
 URL:		http://www.feep.net/libtar/
 BuildRequires:	autoconf
 BuildRequires:	libtool
@@ -49,6 +50,7 @@ Statyczna biblioteka libtar.
 %prep
 %setup -q
 %patch0 -p1
+%patch1 -p1
 
 %build
 # ugly, but working solution
