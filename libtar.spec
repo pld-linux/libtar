@@ -11,6 +11,7 @@ Patch0:		%{name}-shared.patch
 Patch1:		%{name}-fix-memleak.patch
 URL:		http://www.feep.net/libtar/
 BuildRequires:	autoconf
+BuildRequires:	automake
 BuildRequires:	libtool
 BuildRequires:	zlib-devel
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
