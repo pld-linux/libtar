@@ -2,7 +2,7 @@ Summary:	C library for manipulating POSIX tar files
 Summary(pl.UTF-8):	Biblioteka C do manipulacji plikami tar zgodnymi z POSIX
 Name:		libtar
 Version:	1.2.11
-Release:	1
+Release:	2
 License:	BSD
 Group:		Libraries
 Source0:	ftp://ftp.feep.net/pub/software/libtar/%{name}-%{version}.tar.gz
@@ -59,7 +59,7 @@ cat %{_aclocaldir}/libtool.m4 >> autoconf/aclocal.m4
 cat %{_aclocaldir}/ltoptions.m4 >> autoconf/aclocal.m4
 cat %{_aclocaldir}/ltversion.m4 >> autoconf/aclocal.m4
 cat %{_aclocaldir}/ltsugar.m4 >> autoconf/aclocal.m4
-cp %{_datadir}/libtool/config/config.{sub,guess} autoconf
+cp %{_datadir}/libtool/build-aux/config.{sub,guess} autoconf
 %{__libtoolize}
 %{__autoconf} -I autoconf
 %configure
