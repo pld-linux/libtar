@@ -1,16 +1,17 @@
 Summary:	C library for manipulating POSIX tar files
 Summary(pl.UTF-8):	Biblioteka C do manipulacji plikami tar zgodnymi z POSIX
 Name:		libtar
-Version:	1.2.11
-Release:	2
+Version:	1.2.20
+Release:	1
 License:	BSD
 Group:		Libraries
-Source0:	ftp://ftp.feep.net/pub/software/libtar/%{name}-%{version}.tar.gz
-# Source0-md5:	604238e8734ce6e25347a58c4f1a1d7e
-Patch0:		%{name}-shared.patch
-Patch1:		%{name}-fix-memleak.patch
-URL:		http://www.feep.net/libtar/
-BuildRequires:	autoconf
+#Source0:	ftp://ftp.feep.net/pub/software/libtar/%{name}-%{version}.tar.gz
+Source0:	http://http.debian.net/debian/pool/main/libt/libtar/%{name}_%{version}.orig.tar.gz
+# Source0-md5:	6ced95ab3a4b33fbfe2dfb231d156cdb
+# dead currently
+#URL:		http://www.feep.net/libtar/
+URL:		http://repo.or.cz/w/libtar.git/
+BuildRequires:	autoconf >= 2.61
 BuildRequires:	automake
 BuildRequires:	libtool
 BuildRequires:	zlib-devel
@@ -49,19 +50,14 @@ Static libtar library.
 Statyczna biblioteka libtar.
 
 %prep
-%setup -q
-%patch0 -p1
-%patch1 -p1
+%setup -q -n %{name}
 
 %build
-# ugly, but working solution
-cat %{_aclocaldir}/libtool.m4 >> autoconf/aclocal.m4
-cat %{_aclocaldir}/ltoptions.m4 >> autoconf/aclocal.m4
-cat %{_aclocaldir}/ltversion.m4 >> autoconf/aclocal.m4
-cat %{_aclocaldir}/ltsugar.m4 >> autoconf/aclocal.m4
-cp %{_datadir}/libtool/build-aux/config.{sub,guess} autoconf
 %{__libtoolize}
-%{__autoconf} -I autoconf
+%{__aclocal} -I autoconf
+%{__autoconf}
+%{__autoheader}
+%{__automake}
 %configure
 %{__make}
 
@@ -88,8 +84,12 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libtar.so
 %{_libdir}/libtar.la
-%{_includedir}/*.h
-%{_mandir}/man3/*.3*
+%{_includedir}/libtar.h
+%{_includedir}/libtar_listhash.h
+%{_mandir}/man3/TH_*.3*
+%{_mandir}/man3/libtar_*.3*
+%{_mandir}/man3/tar_*.3*
+%{_mandir}/man3/th_*.3*
 
 %files static
 %defattr(644,root,root,755)
