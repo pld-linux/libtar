@@ -2,7 +2,7 @@ Summary:	C library for manipulating POSIX tar files
 Summary(pl.UTF-8):	Biblioteka C do manipulacji plikami tar zgodnymi z POSIX
 Name:		libtar
 Version:	1.2.20
-Release:	1
+Release:	2
 License:	BSD
 Group:		Libraries
 #Source0:	ftp://ftp.feep.net/pub/software/libtar/%{name}-%{version}.tar.gz
