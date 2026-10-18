@@ -1,19 +1,30 @@
+#
+# Conditional build:
+%bcond_without	tests	# regression tests
+
 Summary:	C library for manipulating POSIX tar files
 Summary(pl.UTF-8):	Biblioteka C do manipulacji plikami tar zgodnymi z POSIX
 Name:		libtar
 Version:	1.2.20
-Release:	2
+Release:	3
 License:	BSD
 Group:		Libraries
-#Source0:	ftp://ftp.feep.net/pub/software/libtar/%{name}-%{version}.tar.gz
-Source0:	http://http.debian.net/debian/pool/main/libt/libtar/%{name}_%{version}.orig.tar.gz
+Source0:	https://deb.debian.org/debian/pool/main/libt/libtar/%{name}_%{version}.orig.tar.gz
 # Source0-md5:	6ced95ab3a4b33fbfe2dfb231d156cdb
-# dead currently
-#URL:		http://www.feep.net/libtar/
-URL:		http://repo.or.cz/w/libtar.git/
+Source1:	%{name}-tests.py
+Source2:	%{name}-test.c
+Patch0:		%{name}-format.patch
+Patch1:		%{name}-nostrip.patch
+Patch2:		%{name}-CVE-2013-4420.patch
+Patch3:		%{name}-CVE-2021-33643-33646.patch
+Patch4:		%{name}-gzip.patch
+URL:		https://repo.or.cz/w/libtar.git
 BuildRequires:	autoconf >= 2.61
 BuildRequires:	automake
 BuildRequires:	libtool
+%if %{with tests}
+BuildRequires:	python3
+%endif
 BuildRequires:	zlib-devel
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
@@ -51,6 +62,11 @@ Statyczna biblioteka libtar.
 
 %prep
 %setup -q -n %{name}
+%patch -P0 -p1
+%patch -P1 -p1
+%patch -P2 -p1
+%patch -P3 -p1
+%patch -P4 -p1
 
 %build
 %{__libtoolize}
@@ -58,8 +74,15 @@ Statyczna biblioteka libtar.
 %{__autoconf}
 %{__autoheader}
 %{__automake}
-%configure
+%configure \
+	--with-zlib
 %{__make}
+
+%if %{with tests}
+%{__cc} %{rpmcppflags} %{rpmcflags} -Ilib -Ilisthash \
+	%{SOURCE2} -Llib/.libs -ltar %{rpmldflags} -o libtar-test
+%{__python3} %{SOURCE1} libtar/.libs/libtar lib/.libs ./libtar-test
+%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -78,11 +101,11 @@ rm -rf $RPM_BUILD_ROOT
 %doc COPYRIGHT ChangeLog ChangeLog-1.0.x README TODO
 %attr(755,root,root) %{_bindir}/libtar
 %attr(755,root,root) %{_libdir}/libtar.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libtar.so.0
+%ghost %{_libdir}/libtar.so.0
 
 %files devel
 %defattr(644,root,root,755)
-%attr(755,root,root) %{_libdir}/libtar.so
+%{_libdir}/libtar.so
 %{_libdir}/libtar.la
 %{_includedir}/libtar.h
 %{_includedir}/libtar_listhash.h

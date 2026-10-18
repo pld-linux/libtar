@@ -1,0 +1,12 @@
+Leave executable debug information for RPM's debuginfo extraction.
+--- libtar/libtar/Makefile.in.orig
++++ libtar/libtar/Makefile.in
+@@ -22,7 +22,7 @@
+ 
+ ### Installation programs and flags
+ INSTALL		= @INSTALL@
+-INSTALL_PROGRAM	= @INSTALL_PROGRAM@ -s
++INSTALL_PROGRAM	= @INSTALL_PROGRAM@
+ INSTALL_DATA	= @INSTALL_DATA@
+ LN_S		= @LN_S@
+ MKDIR		= @MKDIR@

@@ -1,0 +1,177 @@
+Keep gzip pointers out of integer fd callbacks; propagate archive read errors.
+Reproducer: MALLOC_MMAP_THRESHOLD_=0 libtar -z -t archive.tar.gz crashes on LP64.
+The CLI owns one gzip stream; the library callback ABI remains unchanged.
+--- a/libtar/libtar.c
++++ b/libtar/libtar.c
+@@ -18,6 +18,8 @@
+ #include <errno.h>
+ #include <sys/param.h>
+ #include <stdlib.h>
++#include <stdarg.h>
++#include <limits.h>
+ 
+ #ifdef STDC_HEADERS
+ # include <string.h>
+@@ -57,12 +59,28 @@
+ 
+ int use_zlib = 0;
+ 
+-int
+-gzopen_frontend(char *pathname, int oflags, int mode)
++/* The command processes one archive at a time; callbacks still take real fds. */
++static gzFile gzip_stream;
++static int gzip_fd = -1;
++
++static int
++gzopen_frontend(const char *pathname, int oflags, ...)
+ {
+ 	char *gzoflags;
+-	gzFile gzf;
+-	int fd;
++	int fd, mode = 0;
++	va_list ap;
++
++	if (gzip_stream != NULL)
++	{
++		errno = EBUSY;
++		return -1;
++	}
++	if (oflags & O_CREAT)
++	{
++		va_start(ap, oflags);
++		mode = va_arg(ap, int);
++		va_end(ap);
++	}
+ 
+ 	switch (oflags & O_ACCMODE)
+ 	{
+@@ -83,24 +101,81 @@
+ 		return -1;
+ 
+ 	if ((oflags & O_CREAT) && fchmod(fd, mode))
+-		return -1;
+-
+-	gzf = gzdopen(fd, gzoflags);
+-	if (!gzf)
+-	{
++	{
++		int saved_errno = errno;
++		close(fd);
++		errno = saved_errno;
++		return -1;
++	}
++
++	gzip_stream = gzdopen(fd, gzoflags);
++	if (!gzip_stream)
++	{
++		close(fd);
+ 		errno = ENOMEM;
+ 		return -1;
+ 	}
+ 
+-	/* This is a bad thing to do on big-endian lp64 systems, where the
+-	   size and placement of integers is different than pointers.
+-	   However, to fix the problem 4 wrapper functions would be needed and
+-	   an extra bit of data associating GZF with the wrapper functions.  */
+-	return (int)gzf;
+-}
+-
+-tartype_t gztype = { (openfunc_t) gzopen_frontend, (closefunc_t) gzclose,
+-	(readfunc_t) gzread, (writefunc_t) gzwrite
++	gzip_fd = fd;
++	return fd;
++}
++
++static int
++gzclose_frontend(int fd)
++{
++	int result;
++	if (fd != gzip_fd || gzip_stream == NULL)
++	{
++		errno = EBADF;
++		return -1;
++	}
++	result = gzclose(gzip_stream);
++	gzip_stream = NULL;
++	gzip_fd = -1;
++	if (result == Z_OK)
++		return 0;
++	if (result != Z_ERRNO)
++		errno = EIO;
++	return -1;
++}
++
++static ssize_t
++gzread_frontend(int fd, void *buf, size_t count)
++{
++	int result;
++	if (fd != gzip_fd || gzip_stream == NULL)
++	{
++		errno = EBADF;
++		return -1;
++	}
++	result = gzread(gzip_stream, buf, count > INT_MAX ? INT_MAX : count);
++	if (result < 0)
++		errno = EIO;
++	return result;
++}
++
++static ssize_t
++gzwrite_frontend(int fd, const void *buf, size_t count)
++{
++	int result;
++	if (fd != gzip_fd || gzip_stream == NULL)
++	{
++		errno = EBADF;
++		return -1;
++	}
++	if (count == 0)
++		return 0;
++	result = gzwrite(gzip_stream, buf, count > INT_MAX ? INT_MAX : count);
++	if (result == 0)
++	{
++		errno = EIO;
++		return -1;
++	}
++	return result;
++}
++
++tartype_t gztype = { gzopen_frontend, gzclose_frontend,
++	gzread_frontend, gzwrite_frontend
+ };
+ 
+ #endif /* HAVE_LIBZ */
+@@ -193,6 +268,7 @@
+ 		{
+ 			fprintf(stderr, "tar_skip_regfile(): %s\n",
+ 				strerror(errno));
++			tar_close(t);
+ 			return -1;
+ 		}
+ 	}
+@@ -202,7 +278,7 @@
+ 	printf("EOF mark encountered after %ld bytes\n",
+ # ifdef HAVE_LIBZ
+ 	       (use_zlib
+-		? gzseek((gzFile) t->fd, 0, SEEK_CUR)
++		? gzseek(gzip_stream, 0, SEEK_CUR)
+ 		:
+ # endif
+ 	       lseek(t->fd, 0, SEEK_CUR)
+@@ -218,7 +294,7 @@
+ 		return -1;
+ 	}
+ 
+-	return 0;
++	return (i == 1 ? 0 : -1);
+ }
+ 
+ 
+@@ -250,6 +326,7 @@
+ 	if (tar_extract_all(t, rootdir) != 0)
+ 	{
+ 		fprintf(stderr, "tar_extract_all(): %s\n", strerror(errno));
++		tar_close(t);
+ 		return -1;
+ 	}
+ 

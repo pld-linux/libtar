@@ -1,0 +1,12 @@
+snprintf's dynamic field width takes int, not size_t.
+--- libtar/lib/util.c.orig
++++ libtar/lib/util.c
+@@ -158,7 +158,7 @@
+ void
+ int_to_oct_nonull(int num, char *oct, size_t octlen)
+ {
+-	snprintf(oct, octlen, "%*lo", octlen - 1, (unsigned long)num);
++	snprintf(oct, octlen, "%*lo", (int)octlen - 1, (unsigned long)num);
+ 	oct[octlen - 1] = ' ';
+ }
+ 
